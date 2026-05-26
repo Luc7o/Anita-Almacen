@@ -7,6 +7,17 @@
 {% endblock %}
 
 {% block contenido %}
+
+<!-- Botón resumen diario -->
+<div class="d-flex justify-content-end mb-3">
+    <form method="POST" action="{{ url_for('admin.enviar_resumen_diario_manual') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-primary">
+            <i class="bi bi-envelope"></i> Enviar resumen del día
+        </button>
+    </form>
+</div>
+
 <!-- KPIs -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-xl-3">

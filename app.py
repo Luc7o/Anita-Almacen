@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, redirect, url_for
 from config import config
-from app_extensions import db, login, migrate, csrf
+from app_extensions import db, login, migrate, csrf, mail
 
 
 def create_app(env=None):
@@ -15,7 +15,8 @@ def create_app(env=None):
     login.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
-
+    mail.init_app(app)
+    
     from models.usuario import Usuario
 
     @login.user_loader
