@@ -1,0 +1,84 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Ventas físicas{% endblock %}
+{% block topbar_titulo %}Ventas físicas{% endblock %}
+
+{% block topbar_acciones %}
+<a href="{{ url_for('admin.nueva_venta') }}" class="btn-topbar">
+  <i class="bi bi-plus-lg me-1"></i>Nueva venta
+</a>
+{% endblock %}
+
+{% block contenido %}
+<div class="adm-card mb-3">
+  <div class="adm-card-body py-2">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Desde</label>
+        <input type="date" name="desde" class="form-control form-control-sm" value="{{ fecha_desde }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Hasta</label>
+        <input type="date" name="hasta" class="form-control form-control-sm" value="{{ fecha_hasta }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Método de pago</label>
+        <select name="metodo" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for k,v in METODOS.items() %}
+          <option value="{{ k }}" {% if k == metodo_sel %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-accent btn-sm w-100">Filtrar</button>
+        <a href="{{ url_for('admin.ventas') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-card-header">
+    <i class="bi bi-cart-check me-2 text-accent"></i>{{ ventas.total }} venta{{ 's' if ventas.total != 1 }}
+  </div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead>
+        <tr><th>N° Venta</th><th>Fecha</th><th>Cliente</th><th>Método</th><th class="text-end">Total</th><th class="text-center">Estado</th><th class="text-center">Ver</th></tr>
+      </thead>
+      <tbody>
+      {% for v in ventas.items %}
+      <tr {% if v.anulada %}class="fila-anulada"{% endif %}>
+        <td class="fw-600">{{ v.numero_venta }}</td>
+        <td class="small text-muted">{{ v.fecha | fecha_hora }}</td>
+        <td class="small">{{ v.cliente_nombre or '— Cliente general —' }}</td>
+        <td><span class="badge badge-secondary">{{ v.metodo_pago_label }}</span></td>
+        <td class="text-end fw-700 {% if not v.anulada %}text-accent{% endif %}">{{ v.total | moneda }}</td>
+        <td class="text-center">
+          {% if v.anulada %}<span class="badge bg-danger-soft text-danger">Anulada</span>
+          {% else %}<span class="badge bg-success-soft text-success">Completada</span>{% endif %}
+        </td>
+        <td class="text-center">
+          <a href="{{ url_for('admin.ver_venta', id=v.id) }}" class="btn-icon"><i class="bi bi-eye"></i></a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center py-4 text-muted">No hay ventas registradas</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if ventas.pages > 1 %}
+  <div class="adm-card-footer d-flex justify-content-center">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if ventas.has_prev %}<li class="page-item"><a class="page-link" href="?pagina={{ ventas.prev_num }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}&metodo={{ metodo_sel }}">‹</a></li>{% endif %}
+      {% for p in ventas.iter_pages() %}
+        {% if p %}<li class="page-item {% if p == ventas.page %}active{% endif %}"><a class="page-link" href="?pagina={{ p }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}&metodo={{ metodo_sel }}">{{ p }}</a></li>
+        {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+      {% endfor %}
+      {% if ventas.has_next %}<li class="page-item"><a class="page-link" href="?pagina={{ ventas.next_num }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}&metodo={{ metodo_sel }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

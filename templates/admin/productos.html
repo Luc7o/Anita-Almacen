@@ -1,0 +1,146 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Productos{% endblock %}
+{% block topbar_titulo %}Productos{% endblock %}
+
+{% block topbar_acciones %}
+<a href="{{ url_for('admin.nuevo_producto') }}" class="btn-topbar">
+  <i class="bi bi-plus-lg me-1"></i>Nuevo producto
+</a>
+{% endblock %}
+
+{% block contenido %}
+<!-- Filtros -->
+<div class="adm-card mb-3">
+  <div class="adm-card-body py-2">
+    <form method="GET" class="row g-2 align-items-center">
+      <div class="col-12 col-md-5">
+        <div class="input-search">
+          <i class="bi bi-search"></i>
+          <input type="text" name="q" class="form-control" placeholder="Buscar por nombre, SKU o código..." value="{{ busqueda }}">
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <select name="cat" class="form-select form-select-sm">
+          <option value="0">Todas las categorías</option>
+          {% for c in categorias %}
+          <option value="{{ c.id }}" {% if c.id == cat_sel %}selected{% endif %}>{{ c.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <select name="estado" class="form-select form-select-sm">
+          <option value="activos"   {% if estado == 'activos' %}selected{% endif %}>Activos</option>
+          <option value="inactivos" {% if estado == 'inactivos' %}selected{% endif %}>Inactivos</option>
+          <option value="todos"     {% if estado == 'todos' %}selected{% endif %}>Todos</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-accent btn-sm w-100">Filtrar</button>
+        <a href="{{ url_for('admin.productos') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="adm-card">
+  <div class="adm-card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-box-seam me-2 text-accent"></i>
+      {{ productos.total }} producto{{ 's' if productos.total != 1 }}
+    </span>
+    <a href="{{ url_for('admin.nuevo_movimiento') }}" class="btn-sm-link">
+      <i class="bi bi-arrow-left-right me-1"></i>Registrar movimiento
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>SKU</th>
+          <th>Categoría</th>
+          <th>Precio venta</th>
+          <th class="text-center">Stock</th>
+          <th class="text-center">Estado</th>
+          <th class="text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in productos.items %}
+      <tr>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="prod-thumb">
+              {% if p.imagen_principal and p.imagen_principal != 'no-imagen.png' %}
+              <img src="{{ url_for('static', filename='img/productos/' + p.imagen_principal) }}" alt="">
+              {% else %}
+              <i class="bi bi-image text-muted"></i>
+              {% endif %}
+            </div>
+            <div>
+              <a href="{{ url_for('admin.ver_producto', id=p.id) }}" class="prod-nombre">{{ p.nombre }}</a>
+              {% if p.proveedor %}<div class="text-muted" style="font-size:.72rem;">{{ p.proveedor.nombre }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td><span class="badge-sku">{{ p.sku or '—' }}</span></td>
+        <td>{{ p.categoria.nombre if p.categoria else '—' }}</td>
+        <td class="fw-600 text-accent">{{ p.precio_venta | moneda }}</td>
+        <td class="text-center">
+          <span class="stock-badge {% if p.sin_stock %}danger{% elif p.stock_bajo %}warning{% else %}ok{% endif %}">
+            {{ p.stock }}
+          </span>
+        </td>
+        <td class="text-center">
+          {% if p.activo %}<span class="badge bg-success-soft text-success">Activo</span>
+          {% else %}<span class="badge bg-danger-soft text-danger">Inactivo</span>{% endif %}
+        </td>
+        <td class="text-center">
+          <div class="d-flex justify-content-center gap-1">
+            <a href="{{ url_for('admin.ver_producto', id=p.id) }}"     class="btn-icon" title="Ver detalle"><i class="bi bi-eye"></i></a>
+            <a href="{{ url_for('admin.editar_producto', id=p.id) }}"  class="btn-icon" title="Editar"><i class="bi bi-pencil"></i></a>
+            <a href="{{ url_for('admin.nuevo_movimiento', prod=p.id) }}" class="btn-icon text-success" title="Movimiento de stock"><i class="bi bi-arrow-left-right"></i></a>
+            <form method="POST" action="{{ url_for('admin.toggle_producto', id=p.id) }}" class="d-inline">
+              {{ csrf_token() if csrf_token is defined else '' }}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn-icon {% if p.activo %}text-warning{% else %}text-success{% endif %}"
+                      title="{{ 'Desactivar' if p.activo else 'Activar' }}">
+                <i class="bi bi-{% if p.activo %}toggle-on{% else %}toggle-off{% endif %}"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center py-4 text-muted">No se encontraron productos</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación -->
+  {% if productos.pages > 1 %}
+  <div class="adm-card-footer d-flex justify-content-center">
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if productos.has_prev %}
+        <li class="page-item"><a class="page-link" href="?pagina={{ productos.prev_num }}&q={{ busqueda }}&cat={{ cat_sel }}&estado={{ estado }}">‹</a></li>
+        {% endif %}
+        {% for p in productos.iter_pages() %}
+          {% if p %}
+          <li class="page-item {% if p == productos.page %}active{% endif %}">
+            <a class="page-link" href="?pagina={{ p }}&q={{ busqueda }}&cat={{ cat_sel }}&estado={{ estado }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        {% if productos.has_next %}
+        <li class="page-item"><a class="page-link" href="?pagina={{ productos.next_num }}&q={{ busqueda }}&cat={{ cat_sel }}&estado={{ estado }}">›</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

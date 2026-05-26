@@ -1,0 +1,36 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Categorías{% endblock %}
+{% block topbar_titulo %}Categorías{% endblock %}
+{% block topbar_acciones %}
+<a href="{{ url_for('admin.nueva_categoria') }}" class="btn-topbar"><i class="bi bi-plus-lg me-1"></i>Nueva categoría</a>
+{% endblock %}
+{% block contenido %}
+<div class="adm-card">
+  <div class="adm-card-header"><i class="bi bi-tags me-2 text-accent"></i>{{ categorias | length }} categoría{{ 's' if categorias | length != 1 }}</div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead><tr><th>Nombre</th><th>Slug</th><th>Descripción</th><th>Ícono</th><th>Productos</th><th class="text-center">Estado</th><th class="text-center">Acción</th></tr></thead>
+      <tbody>
+      {% for c in categorias %}
+      <tr>
+        <td class="fw-600"><i class="bi bi-{{ c.icono }} me-2 text-accent"></i>{{ c.nombre }}</td>
+        <td class="small text-muted">{{ c.slug }}</td>
+        <td class="small">{{ c.descripcion or '—' }}</td>
+        <td class="small text-muted">{{ c.icono }}</td>
+        <td>{{ c.productos.filter_by(activo=True).count() }}</td>
+        <td class="text-center">
+          {% if c.activo %}<span class="badge bg-success-soft text-success">Activa</span>
+          {% else %}<span class="badge bg-danger-soft text-danger">Inactiva</span>{% endif %}
+        </td>
+        <td class="text-center">
+          <a href="{{ url_for('admin.editar_categoria', id=c.id) }}" class="btn-icon" title="Editar"><i class="bi bi-pencil"></i></a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center py-4 text-muted">Sin categorías</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+# BUG CORREGIDO: .env con credenciales nunca debe subirse al repositorio
+.env
+*.pyc
+__pycache__/
+instance/
+.webassets-cache
+*.db
+*.sqlite
+static/img/productos/*.png
+static/img/productos/*.jpg
+static/img/productos/*.jpeg
+static/img/productos/*.webp
+.DS_Store
+*.egg-info/
+dist/
+build/

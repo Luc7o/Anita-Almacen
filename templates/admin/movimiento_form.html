@@ -1,0 +1,81 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Registrar movimiento{% endblock %}
+{% block topbar_titulo %}Registrar movimiento de stock{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+<div class="col-md-7">
+  <div class="adm-card">
+    <div class="adm-card-header"><i class="bi bi-arrow-left-right me-2 text-accent"></i>Datos del movimiento</div>
+    <div class="adm-card-body">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+          {{ form.producto_id.label(class='form-label') }}
+          {{ form.producto_id(class='form-select' + (' is-invalid' if form.producto_id.errors else ''), id='sel-producto') }}
+        </div>
+
+        <!-- Info stock del producto seleccionado -->
+        <div id="stock-info" class="alert alert-info py-2 small mb-3 d-none">
+          <i class="bi bi-boxes me-1"></i>Stock actual: <strong id="stock-actual">—</strong> unidades
+        </div>
+
+        <div class="mb-3">
+          {{ form.tipo.label(class='form-label') }}
+          {{ form.tipo(class='form-select') }}
+          <small class="text-muted"><strong>Ajuste:</strong> establece el stock en el valor indicado (no suma ni resta).</small>
+        </div>
+
+        <div class="mb-3">
+          {{ form.cantidad.label(class='form-label') }}
+          {{ form.cantidad(class='form-control' + (' is-invalid' if form.cantidad.errors else ''), min='1') }}
+          {% if form.cantidad.errors %}<div class="invalid-feedback">{{ form.cantidad.errors[0] }}</div>{% endif %}
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-8">
+            {{ form.motivo.label(class='form-label') }}
+            {{ form.motivo(class='form-control', placeholder='Ej: Compra factura #123, merma, corrección...') }}
+          </div>
+          <div class="col-4">
+            {{ form.referencia.label(class='form-label') }}
+            {{ form.referencia(class='form-control', placeholder='F-001') }}
+          </div>
+        </div>
+
+        <div class="mb-4">
+          {{ form.proveedor_id.label(class='form-label') }}
+          {{ form.proveedor_id(class='form-select') }}
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-accent px-4">
+            <i class="bi bi-check-lg me-1"></i>Registrar
+          </button>
+          <a href="{{ url_for('admin.movimientos') }}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('sel-producto').addEventListener('change', function () {
+  const id = this.value;
+  if (!id) return;
+  fetch(`/admin/api/producto/${id}`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('stock-actual').textContent = d.stock + ' ' + d.unidad;
+      document.getElementById('stock-info').classList.remove('d-none');
+    });
+});
+// Disparar al cargar si ya hay producto seleccionado
+const sel = document.getElementById('sel-producto');
+if (sel.value) sel.dispatchEvent(new Event('change'));
+</script>
+{% endblock %}

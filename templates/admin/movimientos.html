@@ -1,0 +1,121 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Movimientos de stock{% endblock %}
+{% block topbar_titulo %}Movimientos de stock{% endblock %}
+
+{% block topbar_acciones %}
+<a href="{{ url_for('admin.nuevo_movimiento') }}" class="btn-topbar">
+  <i class="bi bi-plus-lg me-1"></i>Registrar movimiento
+</a>
+{% endblock %}
+
+{% block contenido %}
+<!-- Filtros -->
+<div class="adm-card mb-3">
+  <div class="adm-card-body py-2">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-12 col-md-3">
+        <label class="form-label small mb-1">Producto</label>
+        <select name="prod" class="form-select form-select-sm">
+          <option value="0">Todos los productos</option>
+          {% for p in productos %}
+          <option value="{{ p.id }}" {% if p.id == prod_sel %}selected{% endif %}>{{ p.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Tipo</label>
+        <select name="tipo" class="form-select form-select-sm">
+          <option value="">Todos</option>
+          {% for key, val in TIPOS.items() %}
+          <option value="{{ key }}" {% if key == tipo_sel %}selected{% endif %}>{{ val[0] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Desde</label>
+        <input type="date" name="desde" class="form-control form-control-sm" value="{{ fecha_desde }}">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">Hasta</label>
+        <input type="date" name="hasta" class="form-control form-control-sm" value="{{ fecha_hasta }}">
+      </div>
+      <div class="col-6 col-md-3 d-flex gap-2 align-items-end">
+        <button type="submit" class="btn btn-accent btn-sm w-100">Filtrar</button>
+        <a href="{{ url_for('admin.movimientos') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="adm-card">
+  <div class="adm-card-header">
+    <i class="bi bi-arrow-left-right me-2 text-accent"></i>
+    {{ movimientos.total }} movimiento{{ 's' if movimientos.total != 1 }}
+  </div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Producto</th>
+          <th class="text-center">Cantidad</th>
+          <th class="text-center">Stock ant.</th>
+          <th class="text-center">Stock nuevo</th>
+          <th>Motivo</th>
+          <th>Referencia</th>
+          <th>Proveedor</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for m in movimientos.items %}
+      <tr>
+        <td class="small text-muted">{{ m.fecha | fecha_hora }}</td>
+        <td>
+          <span class="badge badge-{{ m.tipo_color }}">
+            <i class="bi bi-{{ m.tipo_icono }} me-1"></i>{{ m.tipo_label }}
+          </span>
+        </td>
+        <td>
+          <a href="{{ url_for('admin.ver_producto', id=m.producto_id) }}" class="link-tabla">
+            {{ m.producto.nombre }}
+          </a>
+        </td>
+        <td class="text-center fw-700 {% if m.tipo in ('entrada','devolucion') %}text-success{% else %}text-danger{% endif %}">
+          {% if m.tipo in ('entrada','devolucion') %}+{% elif m.tipo == 'ajuste' %}≈{% else %}-{% endif %}{{ m.cantidad }}
+        </td>
+        <td class="text-center text-muted">{{ m.stock_antes }}</td>
+        <td class="text-center fw-600">{{ m.stock_despues }}</td>
+        <td class="small">{{ m.motivo or '—' }}</td>
+        <td class="small text-muted">{{ m.referencia or '—' }}</td>
+        <td class="small">{{ m.proveedor.nombre if m.proveedor else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center py-4 text-muted">No hay movimientos con esos filtros</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if movimientos.pages > 1 %}
+  <div class="adm-card-footer d-flex justify-content-center">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if movimientos.has_prev %}
+      <li class="page-item"><a class="page-link" href="?pagina={{ movimientos.prev_num }}&prod={{ prod_sel }}&tipo={{ tipo_sel }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}">‹</a></li>
+      {% endif %}
+      {% for p in movimientos.iter_pages() %}
+        {% if p %}
+        <li class="page-item {% if p == movimientos.page %}active{% endif %}">
+          <a class="page-link" href="?pagina={{ p }}&prod={{ prod_sel }}&tipo={{ tipo_sel }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      {% if movimientos.has_next %}
+      <li class="page-item"><a class="page-link" href="?pagina={{ movimientos.next_num }}&prod={{ prod_sel }}&tipo={{ tipo_sel }}&desde={{ fecha_desde }}&hasta={{ fecha_hasta }}">›</a></li>
+      {% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

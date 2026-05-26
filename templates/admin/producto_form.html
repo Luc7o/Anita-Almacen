@@ -1,0 +1,146 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block topbar_titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+<div class="col-xl-9">
+<form method="POST" enctype="multipart/form-data" novalidate>
+  {{ form.hidden_tag() }}
+
+  <div class="row g-3">
+    <!-- Columna izquierda -->
+    <div class="col-md-8">
+      <!-- Info básica -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-info-circle me-2 text-accent"></i>Información del producto</div>
+        <div class="adm-card-body">
+          <div class="mb-3">
+            {{ form.nombre.label(class='form-label') }}
+            {{ form.nombre(class='form-control' + (' is-invalid' if form.nombre.errors else '')) }}
+            {% if form.nombre.errors %}<div class="invalid-feedback">{{ form.nombre.errors[0] }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            {{ form.descripcion.label(class='form-label') }}
+            {{ form.descripcion(class='form-control', rows=3) }}
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.sku.label(class='form-label') }}
+              {{ form.sku(class='form-control') }}
+            </div>
+            <div class="col-6">
+              {{ form.codigo_barras.label(class='form-label') }}
+              {{ form.codigo_barras(class='form-control') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Precios y stock -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-currency-dollar me-2 text-accent"></i>Precios y stock</div>
+        <div class="adm-card-body">
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              {{ form.precio_compra.label(class='form-label') }}
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">S/</span>
+                {{ form.precio_compra(class='form-control') }}
+              </div>
+            </div>
+            <div class="col-6">
+              {{ form.precio_venta.label(class='form-label') }}
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">S/</span>
+                {{ form.precio_venta(class='form-control' + (' is-invalid' if form.precio_venta.errors else '')) }}
+              </div>
+              {% if form.precio_venta.errors %}<div class="text-danger small">{{ form.precio_venta.errors[0] }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col-4">
+              {{ form.stock.label(class='form-label') }}
+              {{ form.stock(class='form-control') }}
+            </div>
+            <div class="col-4">
+              {{ form.stock_minimo.label(class='form-label') }}
+              {{ form.stock_minimo(class='form-control') }}
+            </div>
+            <div class="col-4">
+              {{ form.unidad.label(class='form-label') }}
+              {{ form.unidad(class='form-select') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variantes -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-palette me-2 text-accent"></i>Variantes (opcional)</div>
+        <div class="adm-card-body">
+          <div class="row g-2">
+            <div class="col-6">
+              {{ form.tallas.label(class='form-label') }}
+              {{ form.tallas(class='form-control', placeholder='36, 37, 38, 39, 40') }}
+              <small class="text-muted">Separadas por coma</small>
+            </div>
+            <div class="col-6">
+              {{ form.colores.label(class='form-label') }}
+              {{ form.colores(class='form-control', placeholder='Negro, Blanco, Rojo') }}
+              <small class="text-muted">Separados por coma</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna derecha -->
+    <div class="col-md-4">
+      <!-- Categoría y proveedor -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-tags me-2 text-accent"></i>Clasificación</div>
+        <div class="adm-card-body">
+          <div class="mb-3">
+            {{ form.categoria_id.label(class='form-label') }}
+            {{ form.categoria_id(class='form-select' + (' is-invalid' if form.categoria_id.errors else '')) }}
+          </div>
+          <div class="mb-3">
+            {{ form.proveedor_id.label(class='form-label') }}
+            {{ form.proveedor_id(class='form-select') }}
+          </div>
+          <div>
+            <div class="form-check form-switch">
+              {{ form.activo(class='form-check-input', role='switch') }}
+              {{ form.activo.label(class='form-check-label') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imagen -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-image me-2 text-accent"></i>Imagen</div>
+        <div class="adm-card-body">
+          {% if producto and producto.imagen_principal and producto.imagen_principal != 'no-imagen.png' %}
+          <img src="{{ url_for('static', filename='img/productos/' + producto.imagen_principal) }}"
+               class="img-fluid rounded mb-2" style="max-height:140px; object-fit:cover; width:100%;">
+          {% endif %}
+          {{ form.imagen(class='form-control form-control-sm') }}
+          <small class="text-muted d-block mt-1">JPG, PNG, WEBP · máx 5 MB</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botones -->
+  <div class="d-flex gap-2 mt-1 mb-4">
+    <button type="submit" class="btn btn-accent px-4">
+      <i class="bi bi-check-lg me-1"></i>{{ form.submit.label.text }}
+    </button>
+    <a href="{{ url_for('admin.productos') }}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+</div>
+</div>
+{% endblock %}

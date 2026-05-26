@@ -1,0 +1,49 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Proveedores{% endblock %}
+{% block topbar_titulo %}Proveedores{% endblock %}
+{% block topbar_acciones %}
+<a href="{{ url_for('admin.nuevo_proveedor') }}" class="btn-topbar"><i class="bi bi-plus-lg me-1"></i>Nuevo proveedor</a>
+{% endblock %}
+{% block contenido %}
+<div class="adm-card mb-3">
+  <div class="adm-card-body py-2">
+    <form method="GET" class="d-flex gap-2">
+      <div class="input-search flex-grow-1">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" class="form-control" placeholder="Buscar por nombre o RUC..." value="{{ busqueda }}">
+      </div>
+      <button type="submit" class="btn btn-accent btn-sm">Buscar</button>
+      {% if busqueda %}<a href="{{ url_for('admin.proveedores') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x"></i></a>{% endif %}
+    </form>
+  </div>
+</div>
+<div class="adm-card">
+  <div class="adm-card-header"><i class="bi bi-truck me-2 text-accent"></i>{{ proveedores | length }} proveedor{{ 'es' if proveedores | length != 1 }}</div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead><tr><th>Nombre</th><th>RUC</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Productos</th><th class="text-center">Estado</th><th class="text-center">Acción</th></tr></thead>
+      <tbody>
+      {% for p in proveedores %}
+      <tr>
+        <td class="fw-600">{{ p.nombre }}</td>
+        <td class="small text-muted">{{ p.ruc or '—' }}</td>
+        <td class="small">{{ p.contacto or '—' }}</td>
+        <td class="small">{{ p.telefono or '—' }}</td>
+        <td class="small">{{ p.email or '—' }}</td>
+        <td>{{ p.productos.filter_by(activo=True).count() }}</td>
+        <td class="text-center">
+          {% if p.activo %}<span class="badge bg-success-soft text-success">Activo</span>
+          {% else %}<span class="badge bg-danger-soft text-danger">Inactivo</span>{% endif %}
+        </td>
+        <td class="text-center">
+          <a href="{{ url_for('admin.editar_proveedor', id=p.id) }}" class="btn-icon"><i class="bi bi-pencil"></i></a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center py-4 text-muted">Sin proveedores registrados</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

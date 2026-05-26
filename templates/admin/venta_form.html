@@ -1,0 +1,285 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Nueva venta{% endblock %}
+{% block topbar_titulo %}Registrar venta física{% endblock %}
+
+{% block contenido %}
+<form method="POST" id="form-venta" novalidate>
+  {{ form.hidden_tag() }}
+  {{ form.items_json(id='items-json') }}
+
+  <div class="row g-3">
+    <!-- Buscador y listado de productos -->
+    <div class="col-lg-7">
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-search me-2 text-accent"></i>Agregar productos</div>
+        <div class="adm-card-body">
+          <div class="input-search mb-3">
+            <i class="bi bi-search"></i>
+            <input type="text" id="buscador-prod" class="form-control"
+                   placeholder="Buscar producto por nombre o SKU..." autocomplete="off">
+          </div>
+          <div id="resultados-prod" class="prod-search-list"></div>
+
+          <!-- Lista rápida de productos -->
+          <div class="mt-2">
+            <div class="text-muted small mb-2">O selecciona de la lista:</div>
+            <div class="prod-grid-venta">
+              {% for p in productos %}
+              {% if p.stock > 0 %}
+              <button type="button" class="prod-chip {% if p.sin_stock %}disabled{% endif %}"
+                      data-id="{{ p.id }}" data-nombre="{{ p.nombre }}"
+                      data-precio="{{ p.precio_venta }}" data-stock="{{ p.stock }}"
+                      data-tallas="{{ p.tallas_lista | tojson }}"
+                      data-colores="{{ p.colores_lista | tojson }}"
+                      onclick="agregarItem(this)">
+                <span class="prod-chip-nombre">{{ p.nombre }}</span>
+                <span class="prod-chip-precio">{{ p.precio_venta | moneda }}</span>
+                <span class="prod-chip-stock text-muted">Stk: {{ p.stock }}</span>
+              </button>
+              {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carrito de venta -->
+    <div class="col-lg-5">
+      <div class="adm-card mb-3" id="carrito-card">
+        <div class="adm-card-header"><i class="bi bi-receipt me-2 text-accent"></i>Detalle de venta</div>
+        <div class="adm-card-body p-0">
+          <div id="carrito-vacio" class="text-center py-4 text-muted small">
+            <i class="bi bi-cart fs-2 d-block mb-2"></i>Sin productos agregados
+          </div>
+          <table class="adm-table" id="tabla-carrito" style="display:none;">
+            <thead>
+              <tr><th>Producto</th><th class="text-center">Cant.</th><th class="text-end">Subtotal</th><th></th></tr>
+            </thead>
+            <tbody id="carrito-body"></tbody>
+          </table>
+        </div>
+        <div class="adm-card-footer" id="carrito-footer" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Subtotal</span>
+            <span id="subtotal-display" class="fw-600">S/ 0.00</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="text-muted small">Descuento</span>
+            <div class="input-group input-group-sm" style="max-width:110px;">
+              <span class="input-group-text">S/</span>
+              {{ form.descuento(class='form-control text-end', id='inp-descuento', oninput='recalcular()') }}
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center border-top pt-2">
+            <span class="fw-700">TOTAL</span>
+            <span id="total-display" class="fw-700 text-accent fs-5">S/ 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos cliente y pago -->
+      <div class="adm-card mb-3">
+        <div class="adm-card-header"><i class="bi bi-person me-2 text-accent"></i>Cliente y pago</div>
+        <div class="adm-card-body">
+          <div class="row g-2 mb-2">
+            <div class="col-8">
+              {{ form.cliente_nombre.label(class='form-label small') }}
+              {{ form.cliente_nombre(class='form-control form-control-sm', placeholder='Opcional') }}
+            </div>
+            <div class="col-4">
+              {{ form.cliente_doc.label(class='form-label small') }}
+              {{ form.cliente_doc(class='form-control form-control-sm', placeholder='DNI/RUC') }}
+            </div>
+          </div>
+          <div class="mb-2">
+            {{ form.metodo_pago.label(class='form-label small') }}
+            {{ form.metodo_pago(class='form-select form-select-sm') }}
+          </div>
+          <div>
+            {{ form.notas.label(class='form-label small') }}
+            {{ form.notas(class='form-control form-control-sm', rows=2, placeholder='Observaciones (opcional)') }}
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-registrar" class="btn btn-accent w-100 btn-lg" disabled onclick="return prepararEnvio()">
+        <i class="bi bi-check-circle me-2"></i>Registrar venta
+      </button>
+    </div>
+  </div>
+</form>
+
+<!-- Modal variantes -->
+<div class="modal fade" id="modalVariantes" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="modal-prod-nombre">Seleccionar variante</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="sel-tallas" class="mb-3"></div>
+        <div id="sel-colores" class="mb-3"></div>
+        <div class="mb-3">
+          <label class="form-label small">Cantidad</label>
+          <input type="number" id="modal-cantidad" class="form-control form-control-sm" value="1" min="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-accent btn-sm w-100" onclick="confirmarVariante()">
+          <i class="bi bi-plus-lg me-1"></i>Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let items = [];
+let itemPendiente = null;
+
+// ── Buscador rápido ──────────────────────────────────────────────────────────
+let debounceTimer;
+document.getElementById('buscador-prod').addEventListener('input', function () {
+  clearTimeout(debounceTimer);
+  const q = this.value.trim();
+  if (q.length < 2) { document.getElementById('resultados-prod').innerHTML = ''; return; }
+  debounceTimer = setTimeout(() => {
+    fetch(`/admin/api/buscar-productos?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(prods => {
+        const c = document.getElementById('resultados-prod');
+        if (!prods.length) { c.innerHTML = '<p class="small text-muted">Sin resultados</p>'; return; }
+        c.innerHTML = prods.map(p =>
+          `<button type="button" class="prod-chip" data-id="${p.id}" data-nombre="${p.nombre}"
+            data-precio="${p.precio_venta}" data-stock="${p.stock}"
+            data-tallas="[]" data-colores="[]"
+            onclick="agregarItem(this)">
+            <span class="prod-chip-nombre">${p.nombre}</span>
+            <span class="prod-chip-precio">S/ ${parseFloat(p.precio_venta).toFixed(2)}</span>
+            <span class="prod-chip-stock text-muted">Stk: ${p.stock}</span>
+          </button>`
+        ).join('');
+      });
+  }, 300);
+});
+
+// ── Agregar item ─────────────────────────────────────────────────────────────
+function agregarItem(btn) {
+  const tallas  = JSON.parse(btn.dataset.tallas  || '[]');
+  const colores = JSON.parse(btn.dataset.colores || '[]');
+  itemPendiente = {
+    producto_id: parseInt(btn.dataset.id),
+    nombre:      btn.dataset.nombre,
+    precio_unit: parseFloat(btn.dataset.precio),
+    stock:       parseInt(btn.dataset.stock),
+    talla: '', color: '',
+  };
+  if (tallas.length || colores.length) {
+    document.getElementById('modal-prod-nombre').textContent = btn.dataset.nombre;
+    const st = document.getElementById('sel-tallas');
+    const sc = document.getElementById('sel-colores');
+    st.innerHTML = tallas.length ? `<label class="form-label small">Talla</label>
+      <div class="variante-opciones">${tallas.map(t=>`<button type="button" class="var-chip" onclick="selVar(this,'talla')" data-val="${t}">${t}</button>`).join('')}</div>` : '';
+    sc.innerHTML = colores.length ? `<label class="form-label small">Color</label>
+      <div class="variante-opciones">${colores.map(c=>`<button type="button" class="var-chip" onclick="selVar(this,'color')" data-val="${c}">${c}</button>`).join('')}</div>` : '';
+    document.getElementById('modal-cantidad').value = 1;
+    new bootstrap.Modal(document.getElementById('modalVariantes')).show();
+  } else {
+    itemPendiente.cantidad = 1;
+    commitItem();
+  }
+}
+
+function selVar(btn, tipo) {
+  btn.closest('.variante-opciones').querySelectorAll('.var-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  itemPendiente[tipo] = btn.dataset.val;
+}
+
+function confirmarVariante() {
+  itemPendiente.cantidad = parseInt(document.getElementById('modal-cantidad').value) || 1;
+  bootstrap.Modal.getInstance(document.getElementById('modalVariantes')).hide();
+  commitItem();
+}
+
+function commitItem() {
+  const p = itemPendiente;
+  const existente = items.find(i => i.producto_id === p.producto_id && i.talla === p.talla && i.color === p.color);
+  if (existente) {
+    existente.cantidad += p.cantidad;
+    existente.subtotal  = existente.cantidad * existente.precio_unit;
+  } else {
+    items.push({ ...p, subtotal: p.cantidad * p.precio_unit });
+  }
+  renderCarrito();
+}
+
+// ── Render carrito ───────────────────────────────────────────────────────────
+function renderCarrito() {
+  const tbody  = document.getElementById('carrito-body');
+  const tabla  = document.getElementById('tabla-carrito');
+  const vacio  = document.getElementById('carrito-vacio');
+  const footer = document.getElementById('carrito-footer');
+
+  if (!items.length) {
+    tabla.style.display  = 'none';
+    footer.style.display = 'none';
+    vacio.style.display  = 'block';
+    document.getElementById('btn-registrar').disabled = true;
+    return;
+  }
+  tabla.style.display  = 'table';
+  footer.style.display = 'block';
+  vacio.style.display  = 'none';
+  document.getElementById('btn-registrar').disabled = false;
+
+  tbody.innerHTML = items.map((it, idx) => `
+    <tr>
+      <td>
+        <div class="small fw-600">${it.nombre}</div>
+        <div class="text-muted" style="font-size:.72rem;">${[it.talla,it.color].filter(Boolean).join(' · ') || 'S/ ' + it.precio_unit.toFixed(2) + ' c/u'}</div>
+      </td>
+      <td class="text-center">
+        <div class="qty-ctrl">
+          <button type="button" onclick="cambiarCant(${idx},-1)">-</button>
+          <span>${it.cantidad}</span>
+          <button type="button" onclick="cambiarCant(${idx},1)">+</button>
+        </div>
+      </td>
+      <td class="text-end fw-600 text-accent">S/ ${it.subtotal.toFixed(2)}</td>
+      <td><button type="button" class="btn-icon text-danger" onclick="eliminarItem(${idx})"><i class="bi bi-x"></i></button></td>
+    </tr>`
+  ).join('');
+  recalcular();
+}
+
+function cambiarCant(idx, delta) {
+  items[idx].cantidad = Math.max(1, items[idx].cantidad + delta);
+  items[idx].subtotal = items[idx].cantidad * items[idx].precio_unit;
+  renderCarrito();
+}
+
+function eliminarItem(idx) {
+  items.splice(idx, 1);
+  renderCarrito();
+}
+
+function recalcular() {
+  const sub  = items.reduce((s, i) => s + i.subtotal, 0);
+  const desc = parseFloat(document.getElementById('inp-descuento').value) || 0;
+  const tot  = Math.max(sub - desc, 0);
+  document.getElementById('subtotal-display').textContent = 'S/ ' + sub.toFixed(2);
+  document.getElementById('total-display').textContent    = 'S/ ' + tot.toFixed(2);
+}
+
+function prepararEnvio() {
+  if (!items.length) { alert('Agrega al menos un producto.'); return false; }
+  document.getElementById('items-json').value = JSON.stringify(items);
+  return true;
+}
+</script>
+{% endblock %}

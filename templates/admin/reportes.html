@@ -1,0 +1,191 @@
+{% extends 'admin/base_admin.html' %}
+{% block titulo %}Reportes{% endblock %}
+{% block topbar_titulo %}Reportes{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block contenido %}
+
+<!-- KPIs rápidos inventario -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-danger">
+      <div class="stat-icon bg-danger"><i class="bi bi-exclamation-octagon"></i></div>
+      <div>
+        <div class="stat-value">{{ sin_stock }}</div>
+        <div class="stat-label">Sin stock</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card stat-warning">
+      <div class="stat-icon bg-warning"><i class="bi bi-exclamation-triangle"></i></div>
+      <div>
+        <div class="stat-value">{{ stock_bajo }}</div>
+        <div class="stat-label">Stock bajo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos fila 1 -->
+<div class="row g-3 mb-4">
+  <!-- Ventas por mes -->
+  <div class="col-lg-8">
+    <div class="adm-card h-100">
+      <div class="adm-card-header">
+        <i class="bi bi-bar-chart-line me-2 text-accent"></i>Ventas mensuales (últimos 6 meses)
+      </div>
+      <div class="adm-card-body" style="padding:.8rem 1rem 1rem;">
+        <canvas id="chartMeses" style="max-height:250px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Ventas por método de pago -->
+  <div class="col-lg-4">
+    <div class="adm-card h-100">
+      <div class="adm-card-header">
+        <i class="bi bi-pie-chart me-2 text-accent"></i>Método de pago (mes actual)
+      </div>
+      <div class="adm-card-body d-flex align-items-center justify-content-center" style="min-height:200px;">
+        {% if ventas_metodo %}
+        <canvas id="chartMetodo" style="max-height:230px; max-width:230px;"></canvas>
+        {% else %}
+        <p class="text-muted small text-center">Sin ventas este mes</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Inventario por categoría -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="adm-card h-100">
+      <div class="adm-card-header">
+        <i class="bi bi-boxes me-2 text-accent"></i>Inventario por categoría
+      </div>
+      <div class="table-responsive">
+        <table class="adm-table">
+          <thead>
+            <tr><th>Categoría</th><th class="text-center">Productos</th><th class="text-center">Unidades</th><th class="text-end">Valor (S/)</th></tr>
+          </thead>
+          <tbody>
+          {% for c in inventario_cat %}
+          <tr>
+            <td class="fw-600">{{ c.nombre }}</td>
+            <td class="text-center">{{ c.productos }}</td>
+            <td class="text-center">{{ c.unidades or 0 }}</td>
+            <td class="text-end fw-600 text-accent">{{ (c.valor or 0) | moneda }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">Sin datos</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 10 productos más vendidos del mes -->
+  <div class="col-lg-6">
+    <div class="adm-card h-100">
+      <div class="adm-card-header">
+        <i class="bi bi-trophy me-2 text-warning"></i>Top 10 productos más vendidos (mes actual)
+      </div>
+      <div class="table-responsive">
+        <table class="adm-table">
+          <thead>
+            <tr><th>#</th><th>Producto</th><th>SKU</th><th class="text-center">Uds.</th><th class="text-end">Monto</th></tr>
+          </thead>
+          <tbody>
+          {% for i, p in top_productos | enumerate(start=1) %}
+          <tr>
+            <td class="text-muted fw-700">{{ i }}</td>
+            <td class="fw-600">{{ p.nombre }}</td>
+            <td class="small text-muted">{{ p.sku or '—' }}</td>
+            <td class="text-center fw-600">{{ p.unidades }}</td>
+            <td class="text-end fw-600 text-accent">{{ p.monto | moneda }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">Sin ventas este mes</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ventas por método detalle -->
+{% if ventas_metodo %}
+<div class="adm-card mb-4">
+  <div class="adm-card-header"><i class="bi bi-credit-card me-2 text-accent"></i>Detalle por método de pago — mes actual</div>
+  <div class="table-responsive">
+    <table class="adm-table">
+      <thead><tr><th>Método</th><th class="text-center">N° ventas</th><th class="text-end">Total recaudado</th></tr></thead>
+      <tbody>
+      {% for v in ventas_metodo %}
+      <tr>
+        <td class="fw-600">{{ v.metodo_pago | title }}</td>
+        <td class="text-center">{{ v.cantidad }}</td>
+        <td class="text-end fw-600 text-accent">{{ v.total | moneda }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Ventas por mes
+const meses  = {{ ventas_por_mes | map(attribute='mes')   | list | tojson }};
+const totmes = {{ ventas_por_mes | map(attribute='total')  | list | tojson }};
+new Chart(document.getElementById('chartMeses'), {
+  type: 'bar',
+  data: {
+    labels: meses,
+    datasets: [{
+      label: 'Ventas (S/)', data: totmes,
+      backgroundColor: 'rgba(165,54,148,.25)',
+      borderColor: '#a53694', borderWidth: 2, borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { callback: v => 'S/ ' + v.toFixed(0) }, grid: { color:'rgba(0,0,0,.05)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Métodos de pago
+{% if ventas_metodo %}
+const metodos = {{ ventas_metodo | map(attribute='metodo_pago') | list | tojson }};
+const montos  = {{ ventas_metodo | map(attribute='total')       | list | map('float') | list | tojson }};
+const colores = ['#a53694','#6f42c1','#0dcaf0','#20c997','#ffc107','#fd7e14'];
+new Chart(document.getElementById('chartMetodo'), {
+  type: 'doughnut',
+  data: {
+    labels: metodos,
+    datasets: [{ data: montos, backgroundColor: colores.slice(0, metodos.length), borderWidth: 2 }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ' S/ ' + ctx.raw.toFixed(2) } }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}
