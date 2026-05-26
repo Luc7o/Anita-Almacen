@@ -10,6 +10,15 @@ class Config:
     DB_USER     = os.environ.get('DB_USER', 'root')
     DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
     DB_NAME     = os.environ.get('DB_NAME', 'almacen_anita_db')
+    
+    # Flask-Mail
+    MAIL_SERVER   = 'smtp.gmail.com'
+    MAIL_PORT     = 587
+    MAIL_USE_TLS  = True
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DESTINATARIO = os.environ.get('MAIL_DESTINATARIO')
+
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',

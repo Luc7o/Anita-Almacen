@@ -1,4 +1,5 @@
 import os, uuid, json
+from utils.notificaciones import enviar_resumen_venta, enviar_alerta_stock
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
@@ -416,7 +417,6 @@ def nueva_venta():
         db.session.add(venta)
         db.session.flush()
 
-        # BUG CORREGIDO: Validar stock acumulado por producto antes de procesar
         from collections import defaultdict
         cantidades_por_prod = defaultdict(int)
         for item in items:
@@ -429,8 +429,7 @@ def nueva_venta():
                 flash(f'Stock insuficiente para: {nombre_chk}.', 'danger')
                 return render_template('admin/venta_form.html', form=form,
                                        productos=productos_activos)
-
-        for item in items:
+        for item in items:                        # ← mismo nivel que los for de arriba
             prod = Producto.query.get(item['producto_id'])
             if not prod or prod.stock < int(item['cantidad']):
                 db.session.rollback()
@@ -449,17 +448,21 @@ def nueva_venta():
             stock_antes = prod.stock
             prod.stock -= int(item['cantidad'])
             mov = MovimientoStock(
-                producto_id   = prod.id, tipo='venta',
-                cantidad      = int(item['cantidad']),
-                stock_antes   = stock_antes, stock_despues=prod.stock,
-                motivo        = f'Venta física {venta.numero_venta}',
-                referencia    = venta.numero_venta,
-                usuario_id    = current_user.id,
+                producto_id  = prod.id, tipo='venta',
+                cantidad     = int(item['cantidad']),
+                stock_antes  = stock_antes, stock_despues=prod.stock,
+                motivo       = f'Venta física {venta.numero_venta}',
+                referencia   = venta.numero_venta,
+                usuario_id   = current_user.id,
             )
             db.session.add(detalle)
             db.session.add(mov)
 
         db.session.commit()
+        enviar_resumen_venta(venta)
+        bajos = [d.producto for d in venta.detalles if d.producto.stock_bajo]
+        if bajos:
+            enviar_alerta_stock(bajos)
         flash(f'Venta {venta.numero_venta} registrada correctamente.', 'success')
         return redirect(url_for('admin.ver_venta', id=venta.id))
 
@@ -666,6 +669,31 @@ def reportes():
         inventario_cat=inventario_cat,
         sin_stock=sin_stock, stock_bajo=stock_bajo,
     )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# NOTIFICACIONES
+# ═══════════════════════════════════════════════════════════════════════════════
+@bp.route('/enviar-resumen-diario', methods=['POST'])
+@admin_requerido
+def enviar_resumen_diario_manual():
+    from utils.notificaciones import enviar_resumen_diario
+    from sqlalchemy import func
+    hoy = datetime.utcnow().date()
+
+    ventas_hoy = VentaFisica.query\
+        .filter(func.date(VentaFisica.fecha) == hoy, VentaFisica.anulada == False).all()
+
+    total_hoy = sum(float(v.total) for v in ventas_hoy)
+
+    productos_bajos = Producto.query.filter(
+        Producto.stock <= Producto.stock_minimo,
+        Producto.activo == True
+    ).all()
+
+    enviar_resumen_diario(ventas_hoy, total_hoy, productos_bajos)
+    flash('Resumen del día enviado al correo.', 'success')
+    return redirect(url_for('admin.dashboard'))
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
