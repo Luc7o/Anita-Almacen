@@ -101,9 +101,9 @@
             <tr><th>#</th><th>Producto</th><th>SKU</th><th class="text-center">Uds.</th><th class="text-end">Monto</th></tr>
           </thead>
           <tbody>
-          {% for i, p in top_productos | enumerate(start=1) %}
+          {% for p in top_productos %}
           <tr>
-            <td class="text-muted fw-700">{{ i }}</td>
+            <td class="text-muted fw-700">{{ loop.index }}</td>
             <td class="fw-600">{{ p.nombre }}</td>
             <td class="small text-muted">{{ p.sku or '—' }}</td>
             <td class="text-center fw-600">{{ p.unidades }}</td>
