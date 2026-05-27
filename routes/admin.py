@@ -2,7 +2,7 @@ import os, uuid, json
 from utils.notificaciones import enviar_resumen_venta, enviar_alerta_stock
 from functools import wraps
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from sqlalchemy import func
@@ -387,9 +387,11 @@ def nueva_venta():
     form = FormVenta()
     productos_activos = Producto.query.filter_by(activo=True)\
         .order_by(Producto.nombre).all()
-    if form.validate_on_submit():
+    if request.method == 'POST':
         try:
-            items = json.loads(form.items_json.data or '[]')
+            raw = request.form.get('items_json', '[]')
+            print('DEBUG items_json:', repr(raw))
+            items = json.loads(raw)
         except Exception:
             flash('Error al procesar los productos. Inténtalo de nuevo.', 'danger')
             return render_template('admin/venta_form.html', form=form,

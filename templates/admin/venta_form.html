@@ -5,7 +5,7 @@
 {% block contenido %}
 <form method="POST" id="form-venta" novalidate>
   {{ form.hidden_tag() }}
-  {{ form.items_json(id='items-json') }}
+  <input type="hidden" id="items-json" name="items_json">
 
   <div class="row g-3">
     <!-- Buscador y listado de productos -->
@@ -103,8 +103,8 @@
         </div>
       </div>
 
-      <button type="submit" id="btn-registrar" class="btn btn-accent w-100 btn-lg" disabled onclick="return prepararEnvio()">
-        <i class="bi bi-check-circle me-2"></i>Registrar venta
+      <button type="submit" id="btn-registrar" class="btn btn-accent w-100 btn-lg" disabled>
+          <i class="bi bi-check-circle me-2"></i>Registrar venta
       </button>
     </div>
   </div>
@@ -140,44 +140,25 @@
 <script>
 let items = [];
 let itemPendiente = null;
-
-// ── Buscador rápido ──────────────────────────────────────────────────────────
 let debounceTimer;
-document.getElementById('buscador-prod').addEventListener('input', function () {
-  clearTimeout(debounceTimer);
-  const q = this.value.trim();
-  if (q.length < 2) { document.getElementById('resultados-prod').innerHTML = ''; return; }
-  debounceTimer = setTimeout(() => {
-    fetch(`/admin/api/buscar-productos?q=${encodeURIComponent(q)}`)
-      .then(r => r.json())
-      .then(prods => {
-        const c = document.getElementById('resultados-prod');
-        if (!prods.length) { c.innerHTML = '<p class="small text-muted">Sin resultados</p>'; return; }
-        c.innerHTML = prods.map(p =>
-          `<button type="button" class="prod-chip" data-id="${p.id}" data-nombre="${p.nombre}"
-            data-precio="${p.precio_venta}" data-stock="${p.stock}"
-            data-tallas="[]" data-colores="[]"
-            onclick="agregarItem(this)">
-            <span class="prod-chip-nombre">${p.nombre}</span>
-            <span class="prod-chip-precio">S/ ${parseFloat(p.precio_venta).toFixed(2)}</span>
-            <span class="prod-chip-stock text-muted">Stk: ${p.stock}</span>
-          </button>`
-        ).join('');
-      });
-  }, 300);
-});
 
 // ── Agregar item ─────────────────────────────────────────────────────────────
 function agregarItem(btn) {
-  const tallas  = JSON.parse(btn.dataset.tallas  || '[]');
-  const colores = JSON.parse(btn.dataset.colores || '[]');
+  let tallas  = [];
+  let colores = [];
+  try { tallas  = JSON.parse(btn.dataset.tallas  || '[]'); } catch(e) { tallas  = []; }
+  try { colores = JSON.parse(btn.dataset.colores || '[]'); } catch(e) { colores = []; }
+
   itemPendiente = {
     producto_id: parseInt(btn.dataset.id),
     nombre:      btn.dataset.nombre,
     precio_unit: parseFloat(btn.dataset.precio),
     stock:       parseInt(btn.dataset.stock),
-    talla: '', color: '',
+    cantidad:    1,
+    talla: '',
+    color: '',
   };
+
   if (tallas.length || colores.length) {
     document.getElementById('modal-prod-nombre').textContent = btn.dataset.nombre;
     const st = document.getElementById('sel-tallas');
@@ -189,7 +170,6 @@ function agregarItem(btn) {
     document.getElementById('modal-cantidad').value = 1;
     new bootstrap.Modal(document.getElementById('modalVariantes')).show();
   } else {
-    itemPendiente.cantidad = 1;
     commitItem();
   }
 }
@@ -218,7 +198,6 @@ function commitItem() {
   renderCarrito();
 }
 
-// ── Render carrito ───────────────────────────────────────────────────────────
 function renderCarrito() {
   const tbody  = document.getElementById('carrito-body');
   const tabla  = document.getElementById('tabla-carrito');
@@ -281,5 +260,40 @@ function prepararEnvio() {
   document.getElementById('items-json').value = JSON.stringify(items);
   return true;
 }
+
+// ── Estos sí van dentro de DOMContentLoaded ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+
+  document.getElementById('buscador-prod').addEventListener('input', function () {
+    clearTimeout(debounceTimer);
+    const q = this.value.trim();
+    if (q.length < 2) { document.getElementById('resultados-prod').innerHTML = ''; return; }
+    debounceTimer = setTimeout(() => {
+      fetch(`/admin/api/buscar-productos?q=${encodeURIComponent(q)}`)
+        .then(r => r.json())
+        .then(prods => {
+          const c = document.getElementById('resultados-prod');
+          if (!prods.length) { c.innerHTML = '<p class="small text-muted">Sin resultados</p>'; return; }
+          c.innerHTML = prods.map(p =>
+            `<button type="button" class="prod-chip" data-id="${p.id}" data-nombre="${p.nombre}"
+              data-precio="${p.precio_venta}" data-stock="${p.stock}"
+              data-tallas="[]" data-colores="[]"
+              onclick="agregarItem(this)">
+              <span class="prod-chip-nombre">${p.nombre}</span>
+              <span class="prod-chip-precio">S/ ${parseFloat(p.precio_venta).toFixed(2)}</span>
+              <span class="prod-chip-stock text-muted">Stk: ${p.stock}</span>
+            </button>`
+          ).join('');
+        });
+    }, 300);
+  });
+
+  document.getElementById('form-venta').addEventListener('submit', function(e) {
+    if (!prepararEnvio()) {
+      e.preventDefault();
+    }
+  });
+
+});
 </script>
 {% endblock %}
