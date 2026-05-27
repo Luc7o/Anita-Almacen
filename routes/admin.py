@@ -834,6 +834,62 @@ def exportar_ventas():
         headers={'Content-Disposition': f'attachment; filename=ventas_{fecha}.xlsx'}
     )
 
+@bp.route('/exportar/movimientos')
+@admin_requerido
+def exportar_movimientos():
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from flask import Response
+    import io
+
+    movimientos = MovimientoStock.query.order_by(MovimientoStock.fecha.desc()).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Movimientos'
+
+    header_font  = Font(bold=True, color='FFFFFF')
+    header_fill  = PatternFill(fill_type='solid', fgColor='A53694')
+    header_align = Alignment(horizontal='center')
+
+    encabezados = ['#', 'Fecha', 'Tipo', 'Producto', 'Cantidad',
+                   'Stock Ant.', 'Stock Nuevo', 'Motivo', 'Referencia', 'Proveedor', 'Usuario']
+
+    for col, titulo in enumerate(encabezados, 1):
+        cell = ws.cell(row=1, column=col, value=titulo)
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.alignment = header_align
+
+    for row, m in enumerate(movimientos, 2):
+        ws.cell(row=row, column=1,  value=row - 1)
+        ws.cell(row=row, column=2,  value=m.fecha.strftime('%d/%m/%Y %H:%M'))
+        ws.cell(row=row, column=3,  value=m.tipo_label)
+        ws.cell(row=row, column=4,  value=m.producto.nombre if m.producto else '—')
+        ws.cell(row=row, column=5,  value=m.cantidad)
+        ws.cell(row=row, column=6,  value=m.stock_antes)
+        ws.cell(row=row, column=7,  value=m.stock_despues)
+        ws.cell(row=row, column=8,  value=m.motivo or '—')
+        ws.cell(row=row, column=9,  value=m.referencia or '—')
+        ws.cell(row=row, column=10, value=m.proveedor.nombre if m.proveedor else '—')
+        ws.cell(row=row, column=11, value=m.usuario.nombre if m.usuario else '—')
+
+    anchos = [4, 18, 12, 30, 10, 10, 12, 35, 20, 25, 20]
+    for col, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = ancho
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    fecha = datetime.utcnow().strftime('%Y%m%d')
+    return Response(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename=movimientos_{fecha}.xlsx'}
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # API AJAX
 # ═══════════════════════════════════════════════════════════════════════════════
