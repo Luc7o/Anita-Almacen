@@ -122,9 +122,10 @@
       <div class="adm-card mb-3">
         <div class="adm-card-header"><i class="bi bi-image me-2 text-accent"></i>Imagen</div>
         <div class="adm-card-body">
-          {% if producto and producto.imagen_principal and producto.imagen_principal != 'no-imagen.png' %}
-          <img src="{{ url_for('static', filename='img/productos/' + producto.imagen_principal) }}"
-               class="img-fluid rounded mb-2" style="max-height:140px; object-fit:cover; width:100%;">
+          {% if producto %}
+          <img src="{{ url_for('static', filename='img/productos/' + (producto.imagen_principal or 'no-imagen.png')) }}"
+               class="img-fluid rounded mb-2" style="max-height:140px; object-fit:cover; width:100%;"
+               onerror="this.src='{{ url_for('static', filename='img/no-imagen.png') }}'">
           {% endif %}
           {{ form.imagen(class='form-control form-control-sm') }}
           <small class="text-muted d-block mt-1">JPG, PNG, WEBP · máx 5 MB</small>
