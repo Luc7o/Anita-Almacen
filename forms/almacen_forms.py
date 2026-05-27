@@ -1,7 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import (StringField, TextAreaField, IntegerField, DecimalField,
-                     SelectField, BooleanField, SubmitField, HiddenField)
+from wtforms import (StringField, TextAreaField, IntegerField, DecimalField,SelectField, BooleanField, SubmitField)
 from wtforms.validators import DataRequired, Optional, NumberRange, Length, Email
 
 
@@ -85,5 +84,4 @@ class FormVenta(FlaskForm):
                                  validators=[DataRequired()])
     descuento      = DecimalField('Descuento (S/)', places=2, validators=[Optional()], default=0)
     notas          = TextAreaField('Notas', validators=[Optional()])
-    items_json     = HiddenField('Items')   # JSON con los items del carrito de venta
     submit         = SubmitField('Registrar venta')
