@@ -431,9 +431,9 @@ def nueva_venta():
                 flash(f'Stock insuficiente para: {nombre_chk}.', 'danger')
                 return render_template('admin/venta_form.html', form=form,
                                        productos=productos_activos)
-        for item in items:                        # ← mismo nivel que los for de arriba
+        for item in items:
             prod = Producto.query.get(item['producto_id'])
-            if not prod or prod.stock < int(item['cantidad']):
+            if not prod:
                 db.session.rollback()
                 flash(f'Stock insuficiente para: {item.get("nombre","producto")}.', 'danger')
                 return render_template('admin/venta_form.html', form=form,
@@ -462,7 +462,7 @@ def nueva_venta():
 
         db.session.commit()
         enviar_resumen_venta(venta)
-        bajos = [d.producto for d in venta.detalles if d.producto.stock_bajo]
+        bajos = [d.producto for d in venta.detalles.all() if d.producto.stock_bajo]
         if bajos:
             enviar_alerta_stock(bajos)
         flash(f'Venta {venta.numero_venta} registrada correctamente.', 'success')
@@ -488,7 +488,7 @@ def anular_venta(id):
         return redirect(url_for('admin.ver_venta', id=id))
     venta.anulada = True
     # Revertir stock
-    for det in venta.detalles:
+    for det in venta.detalles.all():
         prod = det.producto
         stock_antes = prod.stock
         prod.stock += det.cantidad
@@ -624,7 +624,10 @@ def reportes():
             m = hoy.month - i
             y = hoy.year
         desde = datetime(y, m, 1)
-        hasta = datetime(y, m+1, 1) if m < 12 else datetime(y+1, 1, 1)
+        if m == 12:
+            hasta = datetime(y + 1, 1, 1)
+        else:
+            hasta = datetime(y, m + 1, 1)
         total = db.session.query(func.sum(VentaFisica.total))\
             .filter(VentaFisica.fecha >= desde, VentaFisica.fecha < hasta,
                     VentaFisica.anulada==False).scalar() or 0
