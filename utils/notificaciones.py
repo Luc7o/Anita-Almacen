@@ -13,7 +13,7 @@ def enviar_resumen_venta(venta):
     try:
         detalles = "\n".join([
             f"  - {d.producto.nombre} x{d.cantidad} = S/ {d.subtotal:.2f}"
-            for d in venta.detalles
+            for d in venta.detalles.all()
         ])
 
         cuerpo = f"""
@@ -29,9 +29,9 @@ Productos:
 {detalles}
 
 ─────────────────────────────────────
-Subtotal:  S/ {venta.subtotal:.2f}
-Descuento: S/ {venta.descuento:.2f}
-TOTAL:     S/ {venta.total:.2f}
+Subtotal:  S/ {float(venta.subtotal):.2f}
+Descuento: S/ {float(venta.descuento):.2f}
+TOTAL:     S/ {float(venta.total):.2f}
 ═══════════════════════════════════════════════
         """
 

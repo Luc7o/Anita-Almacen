@@ -142,6 +142,19 @@ let items = [];
 let itemPendiente = null;
 let debounceTimer;
 
+function agregarItemDesdeApi(id, btn) {
+  fetch(`/admin/api/producto/${id}`)
+    .then(r => r.json())
+    .then(p => {
+      btn.dataset.tallas  = JSON.stringify(p.tallas  || []);
+      btn.dataset.colores = JSON.stringify(p.colores || []);
+      btn.dataset.precio  = p.precio_venta;
+      btn.dataset.stock   = p.stock;
+      agregarItem(btn);
+    })
+    .catch(() => agregarItem(btn));
+}
+
 // ── Agregar item ─────────────────────────────────────────────────────────────
 function agregarItem(btn) {
   let tallas  = [];
@@ -278,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `<button type="button" class="prod-chip" data-id="${p.id}" data-nombre="${p.nombre}"
               data-precio="${p.precio_venta}" data-stock="${p.stock}"
               data-tallas="[]" data-colores="[]"
-              onclick="agregarItem(this)">
+              onclick="agregarItemDesdeApi(${p.id}, this)">
               <span class="prod-chip-nombre">${p.nombre}</span>
               <span class="prod-chip-precio">S/ ${parseFloat(p.precio_venta).toFixed(2)}</span>
               <span class="prod-chip-stock text-muted">Stk: ${p.stock}</span>
