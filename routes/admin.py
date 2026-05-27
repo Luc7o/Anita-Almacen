@@ -694,7 +694,143 @@ def enviar_resumen_diario_manual():
     flash('Resumen del día enviado al correo.', 'success')
     return redirect(url_for('admin.dashboard'))
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPORTAR EXCEL
+# ═══════════════════════════════════════════════════════════════════════════════
+@bp.route('/exportar/productos')
+@admin_requerido
+def exportar_productos():
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from flask import Response
+    import io
 
+    productos = Producto.query.filter_by(activo=True)\
+        .order_by(Producto.nombre).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Productos'
+
+    # Estilo encabezado
+    header_font    = Font(bold=True, color='FFFFFF')
+    header_fill    = PatternFill(fill_type='solid', fgColor='A53694')
+    header_align   = Alignment(horizontal='center')
+
+    encabezados = ['#', 'Nombre', 'SKU', 'Categoría', 'Proveedor',
+                   'Precio Compra', 'Precio Venta', 'Stock', 'Stock Mínimo',
+                   'Margen %', 'Valor Inventario', 'Estado']
+
+    for col, titulo in enumerate(encabezados, 1):
+        cell = ws.cell(row=1, column=col, value=titulo)
+        cell.font   = header_font
+        cell.fill   = header_fill
+        cell.alignment = header_align
+
+    # Filas
+    for row, p in enumerate(productos, 2):
+        ws.cell(row=row, column=1,  value=row - 1)
+        ws.cell(row=row, column=2,  value=p.nombre)
+        ws.cell(row=row, column=3,  value=p.sku or '—')
+        ws.cell(row=row, column=4,  value=p.categoria.nombre)
+        ws.cell(row=row, column=5,  value=p.proveedor.nombre if p.proveedor else '—')
+        ws.cell(row=row, column=6,  value=float(p.precio_compra))
+        ws.cell(row=row, column=7,  value=float(p.precio_venta))
+        ws.cell(row=row, column=8,  value=p.stock)
+        ws.cell(row=row, column=9,  value=p.stock_minimo)
+        ws.cell(row=row, column=10, value=p.margen or 0)
+        ws.cell(row=row, column=11, value=p.valor_inventario)
+        ws.cell(row=row, column=12, value='Activo' if p.activo else 'Inactivo')
+
+        # Colorear stock bajo en rojo
+        if p.sin_stock:
+            ws.cell(row=row, column=8).font = Font(bold=True, color='CC0000')
+        elif p.stock_bajo:
+            ws.cell(row=row, column=8).font = Font(bold=True, color='FF8800')
+
+    # Ancho de columnas
+    anchos = [4, 35, 15, 18, 20, 14, 14, 10, 12, 10, 16, 10]
+    for col, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[
+            openpyxl.utils.get_column_letter(col)
+        ].width = ancho
+
+    # Guardar en memoria y enviar
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    fecha = datetime.utcnow().strftime('%Y%m%d')
+    return Response(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename=productos_{fecha}.xlsx'}
+    )
+
+
+@bp.route('/exportar/ventas')
+@admin_requerido
+def exportar_ventas():
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from flask import Response
+    import io
+
+    ventas = VentaFisica.query.filter_by(anulada=False)\
+        .order_by(VentaFisica.fecha.desc()).all()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Ventas'
+
+    header_font  = Font(bold=True, color='FFFFFF')
+    header_fill  = PatternFill(fill_type='solid', fgColor='A53694')
+    header_align = Alignment(horizontal='center')
+
+    encabezados = ['#', 'N° Venta', 'Fecha', 'Cliente', 'Doc.',
+                   'Método Pago', 'Subtotal', 'Descuento', 'Total', 'Notas']
+
+    for col, titulo in enumerate(encabezados, 1):
+        cell = ws.cell(row=1, column=col, value=titulo)
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.alignment = header_align
+
+    total_general = 0
+    for row, v in enumerate(ventas, 2):
+        ws.cell(row=row, column=1,  value=row - 1)
+        ws.cell(row=row, column=2,  value=v.numero_venta)
+        ws.cell(row=row, column=3,  value=v.fecha.strftime('%d/%m/%Y %H:%M'))
+        ws.cell(row=row, column=4,  value=v.cliente_nombre or '—')
+        ws.cell(row=row, column=5,  value=v.cliente_doc or '—')
+        ws.cell(row=row, column=6,  value=v.metodo_pago_label)
+        ws.cell(row=row, column=7,  value=float(v.subtotal))
+        ws.cell(row=row, column=8,  value=float(v.descuento))
+        ws.cell(row=row, column=9,  value=float(v.total))
+        ws.cell(row=row, column=10, value=v.notas or '')
+        total_general += float(v.total)
+
+    # Fila de total
+    fila_total = len(ventas) + 2
+    ws.cell(row=fila_total, column=8, value='TOTAL:').font = Font(bold=True)
+    ws.cell(row=fila_total, column=9, value=total_general).font = Font(bold=True, color='A53694')
+
+    anchos = [4, 22, 18, 25, 12, 16, 12, 12, 12, 30]
+    for col, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[
+            openpyxl.utils.get_column_letter(col)
+        ].width = ancho
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    fecha = datetime.utcnow().strftime('%Y%m%d')
+    return Response(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename=ventas_{fecha}.xlsx'}
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # API AJAX

@@ -6,6 +6,9 @@
 <a href="{{ url_for('admin.nuevo_producto') }}" class="btn-topbar">
   <i class="bi bi-plus-lg me-1"></i>Nuevo producto
 </a>
+<a href="{{ url_for('admin.exportar_productos') }}" class="btn btn-outline-success">
+    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+</a>
 {% endblock %}
 
 {% block contenido %}
