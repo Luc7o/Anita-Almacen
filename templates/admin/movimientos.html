@@ -6,6 +6,9 @@
 <a href="{{ url_for('admin.nuevo_movimiento') }}" class="btn-topbar">
   <i class="bi bi-plus-lg me-1"></i>Registrar movimiento
 </a>
+<a href="{{ url_for('admin.exportar_movimientos') }}" class="btn btn-outline-success">
+    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+</a>
 {% endblock %}
 
 {% block contenido %}
